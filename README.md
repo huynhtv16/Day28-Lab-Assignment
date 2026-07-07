@@ -34,7 +34,8 @@ Kaggle (GPU T4/P100):
 ### 1. Khởi động Local Stack
 
 ```bash
-cd lab28
+cd lab28  # hoặc thư mục repo hiện tại nếu bạn đặt repo root là lab28
+cp .env.example .env
 docker compose up -d
 docker compose ps  # Kiểm tra tất cả services Up
 ```
@@ -288,27 +289,40 @@ cp .env.example .env
 ### 4. Deploy Prefect Flows
 
 ```bash
+python -m venv .venv
+. .venv/bin/activate
 cd prefect/flows
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 python kafka_to_delta.py
 ```
 
-### 5. Ingest Data vào Kafka
+Lệnh này tạo deployment `kafka-to-delta` với lịch chạy mỗi 5 phút và giữ process phục vụ flow. Mở Prefect UI tại http://localhost:4200 để xem deployment/run.
+
+### 5. Bootstrap Demo Data
+
+Tạo Kafka topic `data.raw`, Qdrant collection `documents` và seed Redis feature mẫu:
 
 ```bash
-cd ../..
+. .venv/bin/activate 2>/dev/null || (python -m venv .venv && . .venv/bin/activate)
+python -m pip install -r requirements.txt
+python scripts/00_bootstrap_local.py
+```
+
+### 6. Ingest Data vào Kafka
+
+```bash
 python scripts/01_ingest_to_kafka.py
 ```
 
-### 6. Chạy Smoke Tests
+### 7. Chạy Smoke Tests
 
 ```bash
 pytest smoke-tests/ -v
 ```
 
-Kỳ vọng: 5/5 tests passing
+Kỳ vọng: toàn bộ smoke tests passing (hiện tại 8 tests).
 
-### 7. Production Readiness Check
+### 8. Production Readiness Check
 
 ```bash
 python scripts/production_readiness_check.py
@@ -320,6 +334,7 @@ Kỳ vọng: Score >80%
 
 | Script | Mô tả |
 |--------|-------|
+| `scripts/00_bootstrap_local.py` | Tạo Kafka topic, Qdrant collection và seed Redis để demo/smoke test |
 | `scripts/01_ingest_to_kafka.py` | Ingest sample data vào Kafka |
 | `scripts/03_delta_to_feast.py` | Load từ Delta Lake và push features vào Feast (Redis) |
 | `scripts/05_embed_to_qdrant.py` | Embed data và lưu vectors vào Qdrant |
@@ -368,9 +383,17 @@ docker compose logs prefect-worker
 **Kafka consumer lag:**
 ```bash
 # Kiểm tra topic
-docker exec lab28-kafka-1 kafka-topics --list --bootstrap-server localhost:9092
+docker compose exec kafka kafka-topics --list --bootstrap-server localhost:9092
 ```
 
 ## Nộp Bài
 
 Xem `SUBMISSION.md` ở thư mục gốc project.
+
+Checklist trước khi push GitHub:
+
+- Source code đầy đủ trong repo này.
+- Ảnh demo nằm trong `screenshots/` theo đúng tên trong `screenshots/README.md`.
+- Ảnh kết quả `pytest smoke-tests/ -v` lưu thành `smoke_tests_results.png`.
+- Ảnh kết quả `python scripts/production_readiness_check.py` lưu thành `production_readiness.png`.
+- 5 câu hỏi submission đã trả lời trong `SUBMISSION_ANSWERS.md`.

@@ -1,5 +1,7 @@
 # scripts/production_readiness_check.py
-import requests, redis, subprocess
+import requests
+import redis
+import subprocess
 
 results = {}
 
@@ -50,10 +52,21 @@ check("Redis reachable", lambda:
 print("\n=== KAFKA ===")
 def check_kafka_topics():
     result = subprocess.run(
-        ["docker", "exec", "lab28-kafka-1", "kafka-topics", "--list",
-         "--bootstrap-server", "localhost:9092"],
+        [
+            "docker",
+            "compose",
+            "exec",
+            "-T",
+            "kafka",
+            "kafka-topics",
+            "--list",
+            "--bootstrap-server",
+            "localhost:9092",
+        ],
         capture_output=True, text=True
     )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "docker compose exec kafka failed")
     assert "data.raw" in result.stdout
 
 check("Kafka topics exist", check_kafka_topics)
